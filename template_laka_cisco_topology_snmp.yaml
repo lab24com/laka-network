@@ -1,0 +1,445 @@
+zabbix_export:
+  version: '7.0'
+  template_groups:
+    - uuid: 36bff6c29af64692839d077febfc7079
+      name: 'Templates/Network devices'
+  templates:
+    - uuid: fca11a2faee74131a16815a43a78e452
+      template: 'LAKA Cisco Topology by SNMP'
+      name: 'LAKA Cisco Topology by SNMP'
+      description: |
+        Complementary topology discovery for Cisco network equipment.
+        Collects CDP and LLDP neighbor relationships without modifying the
+        official Cisco IOS by SNMP template. Designed for LAKA Network Switch.
+      vendor:
+        name: LAKA Soluciones Tecnologicas
+        version: 1.0-0
+      groups:
+        - name: 'Templates/Network devices'
+      items:
+        - uuid: 34e7f0ff76cf44d5bebad8cc73656a26
+          name: 'Topology: CDP SNMP walk'
+          type: SNMP_AGENT
+          snmp_oid: 'walk[1.3.6.1.2.1.31.1.1.1.1,1.3.6.1.4.1.9.9.23.1.2.1.1.3,1.3.6.1.4.1.9.9.23.1.2.1.1.4,1.3.6.1.4.1.9.9.23.1.2.1.1.5,1.3.6.1.4.1.9.9.23.1.2.1.1.6,1.3.6.1.4.1.9.9.23.1.2.1.1.7,1.3.6.1.4.1.9.9.23.1.2.1.1.8,1.3.6.1.4.1.9.9.23.1.2.1.1.9,1.3.6.1.4.1.9.9.23.1.2.1.1.11,1.3.6.1.4.1.9.9.23.1.2.1.1.12]'
+          key: laka.topology.cdp.walk
+          delay: '{$LAKA.TOPOLOGY.UPDATE}'
+          history: 1d
+          value_type: TEXT
+          trends: '0'
+          description: 'Raw CISCO-CDP-MIB neighbor cache plus IF-MIB local interface names.'
+          tags:
+            - tag: component
+              value: raw
+            - tag: component
+              value: topology
+        - uuid: 4c25fa9e6ec64aff8a0e57e52ebd470f
+          name: 'Topology: LLDP SNMP walk'
+          type: SNMP_AGENT
+          snmp_oid: 'walk[1.0.8802.1.1.2.1.3.7.1.2,1.0.8802.1.1.2.1.3.7.1.3,1.0.8802.1.1.2.1.3.7.1.4,1.0.8802.1.1.2.1.4.1.1.4,1.0.8802.1.1.2.1.4.1.1.5,1.0.8802.1.1.2.1.4.1.1.6,1.0.8802.1.1.2.1.4.1.1.7,1.0.8802.1.1.2.1.4.1.1.8,1.0.8802.1.1.2.1.4.1.1.9,1.0.8802.1.1.2.1.4.1.1.10,1.0.8802.1.1.2.1.4.1.1.11,1.0.8802.1.1.2.1.4.1.1.12]'
+          key: laka.topology.lldp.walk
+          delay: '{$LAKA.TOPOLOGY.UPDATE}'
+          history: 1d
+          status: DISABLED
+          value_type: TEXT
+          trends: '0'
+          description: 'Raw IEEE LLDP-MIB local port and remote systems tables.'
+          tags:
+            - tag: component
+              value: raw
+            - tag: component
+              value: topology
+      discovery_rules:
+        - uuid: 2b510176a4414360a37dc5763bf9b32f
+          name: 'Topology: CDP neighbor discovery'
+          type: DEPENDENT
+          key: laka.topology.cdp.discovery
+          delay: '0'
+          filter:
+            evaltype: AND
+            conditions:
+              - macro: '{#REMOTE.NAME}'
+                value: '{$LAKA.TOPOLOGY.CDP.NAME.MATCHES}'
+                formulaid: A
+              - macro: '{#REMOTE.NAME}'
+                value: '{$LAKA.TOPOLOGY.CDP.NAME.NOT_MATCHES}'
+                operator: NOT_MATCHES_REGEX
+                formulaid: B
+          description: 'Discovers every CDP cache entry. Composite index: local ifIndex and CDP device index.'
+          item_prototypes:
+            - uuid: 8652e04d2efa48c6b0e26aa65b0818ce
+              name: 'Topology CDP [{#LOCAL.IFINDEX}/{#REMOTE.INDEX}]: Local interface'
+              type: DEPENDENT
+              key: 'laka.topology.cdp.local.ifname[{#LOCAL.IFINDEX},{#REMOTE.INDEX}]'
+              delay: '0'
+              value_type: CHAR
+              trends: '0'
+              preprocessing:
+                - type: SNMP_WALK_VALUE
+                  parameters:
+                    - '1.3.6.1.2.1.31.1.1.1.1.{#LOCAL.IFINDEX}'
+                    - '0'
+              master_item:
+                key: laka.topology.cdp.walk
+              tags:
+                - tag: component
+                  value: topology
+                - tag: protocol
+                  value: CDP
+            - uuid: c7370666dec24d4280f1ea7974f8dce7
+              name: 'Topology CDP [{#LOCAL.IFINDEX}/{#REMOTE.INDEX}]: Remote device'
+              type: DEPENDENT
+              key: 'laka.topology.cdp.remote.name[{#LOCAL.IFINDEX},{#REMOTE.INDEX}]'
+              delay: '0'
+              value_type: CHAR
+              trends: '0'
+              preprocessing:
+                - type: SNMP_WALK_VALUE
+                  parameters:
+                    - '1.3.6.1.4.1.9.9.23.1.2.1.1.6.{#SNMPINDEX}'
+                    - '0'
+              master_item:
+                key: laka.topology.cdp.walk
+              tags:
+                - tag: component
+                  value: topology
+                - tag: protocol
+                  value: CDP
+                - tag: remote-device
+                  value: '{#REMOTE.NAME}'
+            - uuid: a0ddece194424977aa92bd5549319692
+              name: 'Topology CDP [{#LOCAL.IFINDEX}/{#REMOTE.INDEX}]: Remote address'
+              type: DEPENDENT
+              key: 'laka.topology.cdp.remote.address[{#LOCAL.IFINDEX},{#REMOTE.INDEX}]'
+              delay: '0'
+              value_type: CHAR
+              trends: '0'
+              preprocessing:
+                - type: SNMP_WALK_VALUE
+                  parameters:
+                    - '1.3.6.1.4.1.9.9.23.1.2.1.1.4.{#SNMPINDEX}'
+                    - '0'
+              master_item:
+                key: laka.topology.cdp.walk
+              tags:
+                - tag: component
+                  value: topology
+                - tag: protocol
+                  value: CDP
+            - uuid: cf1ee02a3dcb4c8889a50ef6a7a2e39f
+              name: 'Topology CDP [{#LOCAL.IFINDEX}/{#REMOTE.INDEX}]: Remote port'
+              type: DEPENDENT
+              key: 'laka.topology.cdp.remote.port[{#LOCAL.IFINDEX},{#REMOTE.INDEX}]'
+              delay: '0'
+              value_type: CHAR
+              trends: '0'
+              preprocessing:
+                - type: SNMP_WALK_VALUE
+                  parameters:
+                    - '1.3.6.1.4.1.9.9.23.1.2.1.1.7.{#SNMPINDEX}'
+                    - '0'
+              master_item:
+                key: laka.topology.cdp.walk
+              tags:
+                - tag: component
+                  value: topology
+                - tag: protocol
+                  value: CDP
+            - uuid: 5951bab8c50c4ed58b1554f526b98c09
+              name: 'Topology CDP [{#LOCAL.IFINDEX}/{#REMOTE.INDEX}]: Platform'
+              type: DEPENDENT
+              key: 'laka.topology.cdp.remote.platform[{#LOCAL.IFINDEX},{#REMOTE.INDEX}]'
+              delay: '0'
+              value_type: CHAR
+              trends: '0'
+              preprocessing:
+                - type: SNMP_WALK_VALUE
+                  parameters:
+                    - '1.3.6.1.4.1.9.9.23.1.2.1.1.8.{#SNMPINDEX}'
+                    - '0'
+              master_item:
+                key: laka.topology.cdp.walk
+              tags:
+                - tag: component
+                  value: topology
+                - tag: protocol
+                  value: CDP
+            - uuid: bda8e80a37984d499e170dbce4824e48
+              name: 'Topology CDP [{#LOCAL.IFINDEX}/{#REMOTE.INDEX}]: Software'
+              type: DEPENDENT
+              key: 'laka.topology.cdp.remote.software[{#LOCAL.IFINDEX},{#REMOTE.INDEX}]'
+              delay: '0'
+              value_type: TEXT
+              trends: '0'
+              preprocessing:
+                - type: SNMP_WALK_VALUE
+                  parameters:
+                    - '1.3.6.1.4.1.9.9.23.1.2.1.1.5.{#SNMPINDEX}'
+                    - '0'
+              master_item:
+                key: laka.topology.cdp.walk
+              tags:
+                - tag: component
+                  value: topology
+                - tag: protocol
+                  value: CDP
+            - uuid: bfb03b831b6a4a66bae6c308a13aa95a
+              name: 'Topology CDP [{#LOCAL.IFINDEX}/{#REMOTE.INDEX}]: Native VLAN'
+              type: DEPENDENT
+              key: 'laka.topology.cdp.native.vlan[{#LOCAL.IFINDEX},{#REMOTE.INDEX}]'
+              delay: '0'
+              trends: '0'
+              preprocessing:
+                - type: SNMP_WALK_VALUE
+                  parameters:
+                    - '1.3.6.1.4.1.9.9.23.1.2.1.1.11.{#SNMPINDEX}'
+                    - '0'
+              master_item:
+                key: laka.topology.cdp.walk
+              tags:
+                - tag: component
+                  value: topology
+                - tag: protocol
+                  value: CDP
+          master_item:
+            key: laka.topology.cdp.walk
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - |
+                  var rows = {}, lines = value.split(/\r?\n/);
+                  var base = '1.3.6.1.4.1.9.9.23.1.2.1.1.6.';
+                  for (var i = 0; i < lines.length; i++) {
+                    var p = lines[i].indexOf(' = ');
+                    if (p < 0) continue;
+                    var oid = lines[i].substring(0, p).replace(/^\./, '');
+                    if (oid.indexOf(base) !== 0) continue;
+                    var suffix = oid.substring(base.length);
+                    var idx = suffix.split('.');
+                    if (idx.length !== 2) continue;
+                    var raw = lines[i].substring(p + 3);
+                    var colon = raw.indexOf(': ');
+                    var name = colon >= 0 ? raw.substring(colon + 2) : raw;
+                    name = name.replace(/^"|"$/g, '');
+                    rows[suffix] = {
+                      '{#SNMPINDEX}': suffix,
+                      '{#LOCAL.IFINDEX}': idx[0],
+                      '{#REMOTE.INDEX}': idx[1],
+                      '{#REMOTE.NAME}': name
+                    };
+                  }
+                  return JSON.stringify(Object.keys(rows).map(function (k) { return rows[k]; }));
+        - uuid: e7cbf03c5921443b9312cd679cf813cd
+          name: 'Topology: LLDP neighbor discovery'
+          type: DEPENDENT
+          key: laka.topology.lldp.discovery
+          delay: '0'
+          filter:
+            evaltype: AND
+            conditions:
+              - macro: '{#REMOTE.NAME}'
+                value: '{$LAKA.TOPOLOGY.LLDP.NAME.MATCHES}'
+                formulaid: A
+              - macro: '{#REMOTE.NAME}'
+                value: '{$LAKA.TOPOLOGY.LLDP.NAME.NOT_MATCHES}'
+                operator: NOT_MATCHES_REGEX
+                formulaid: B
+          description: 'Discovers LLDP remote systems. Composite index: time mark, local port number and remote index.'
+          item_prototypes:
+            - uuid: 78b6f398cdd34988990fabd47fe2dc5e
+              name: 'Topology LLDP [{#LOCAL.PORTNUM}/{#REMOTE.INDEX}]: Local port ID'
+              type: DEPENDENT
+              key: 'laka.topology.lldp.local.portid[{#TIMEMARK},{#LOCAL.PORTNUM},{#REMOTE.INDEX}]'
+              delay: '0'
+              value_type: CHAR
+              trends: '0'
+              preprocessing:
+                - type: SNMP_WALK_VALUE
+                  parameters:
+                    - '1.0.8802.1.1.2.1.3.7.1.3.{#LOCAL.PORTNUM}'
+                    - '0'
+              master_item:
+                key: laka.topology.lldp.walk
+              tags:
+                - tag: component
+                  value: topology
+                - tag: protocol
+                  value: LLDP
+            - uuid: 40c6c5902c1b4240b05ede5ba7e0149c
+              name: 'Topology LLDP [{#LOCAL.PORTNUM}/{#REMOTE.INDEX}]: Local port description'
+              type: DEPENDENT
+              key: 'laka.topology.lldp.local.portdesc[{#TIMEMARK},{#LOCAL.PORTNUM},{#REMOTE.INDEX}]'
+              delay: '0'
+              value_type: CHAR
+              trends: '0'
+              preprocessing:
+                - type: SNMP_WALK_VALUE
+                  parameters:
+                    - '1.0.8802.1.1.2.1.3.7.1.4.{#LOCAL.PORTNUM}'
+                    - '0'
+              master_item:
+                key: laka.topology.lldp.walk
+              tags:
+                - tag: component
+                  value: topology
+                - tag: protocol
+                  value: LLDP
+            - uuid: c41d6419a4de4e3e8abc8aeb218b0b5d
+              name: 'Topology LLDP [{#LOCAL.PORTNUM}/{#REMOTE.INDEX}]: Remote system name'
+              type: DEPENDENT
+              key: 'laka.topology.lldp.remote.name[{#TIMEMARK},{#LOCAL.PORTNUM},{#REMOTE.INDEX}]'
+              delay: '0'
+              value_type: CHAR
+              trends: '0'
+              preprocessing:
+                - type: SNMP_WALK_VALUE
+                  parameters:
+                    - '1.0.8802.1.1.2.1.4.1.1.9.{#SNMPINDEX}'
+                    - '0'
+              master_item:
+                key: laka.topology.lldp.walk
+              tags:
+                - tag: component
+                  value: topology
+                - tag: protocol
+                  value: LLDP
+                - tag: remote-device
+                  value: '{#REMOTE.NAME}'
+            - uuid: 2ac8bb047d5244b981b6f724c86adaf0
+              name: 'Topology LLDP [{#LOCAL.PORTNUM}/{#REMOTE.INDEX}]: Remote port ID'
+              type: DEPENDENT
+              key: 'laka.topology.lldp.remote.portid[{#TIMEMARK},{#LOCAL.PORTNUM},{#REMOTE.INDEX}]'
+              delay: '0'
+              value_type: CHAR
+              trends: '0'
+              preprocessing:
+                - type: SNMP_WALK_VALUE
+                  parameters:
+                    - '1.0.8802.1.1.2.1.4.1.1.7.{#SNMPINDEX}'
+                    - '0'
+              master_item:
+                key: laka.topology.lldp.walk
+              tags:
+                - tag: component
+                  value: topology
+                - tag: protocol
+                  value: LLDP
+            - uuid: d8b8f3c1260249c3960b1b0b80c0ed73
+              name: 'Topology LLDP [{#LOCAL.PORTNUM}/{#REMOTE.INDEX}]: Remote port description'
+              type: DEPENDENT
+              key: 'laka.topology.lldp.remote.portdesc[{#TIMEMARK},{#LOCAL.PORTNUM},{#REMOTE.INDEX}]'
+              delay: '0'
+              value_type: CHAR
+              trends: '0'
+              preprocessing:
+                - type: SNMP_WALK_VALUE
+                  parameters:
+                    - '1.0.8802.1.1.2.1.4.1.1.8.{#SNMPINDEX}'
+                    - '0'
+              master_item:
+                key: laka.topology.lldp.walk
+              tags:
+                - tag: component
+                  value: topology
+                - tag: protocol
+                  value: LLDP
+            - uuid: cc94ae0934c444a8b704e5398dfc887e
+              name: 'Topology LLDP [{#LOCAL.PORTNUM}/{#REMOTE.INDEX}]: Chassis ID'
+              type: DEPENDENT
+              key: 'laka.topology.lldp.remote.chassis[{#TIMEMARK},{#LOCAL.PORTNUM},{#REMOTE.INDEX}]'
+              delay: '0'
+              value_type: CHAR
+              trends: '0'
+              preprocessing:
+                - type: SNMP_WALK_VALUE
+                  parameters:
+                    - '1.0.8802.1.1.2.1.4.1.1.5.{#SNMPINDEX}'
+                    - '0'
+              master_item:
+                key: laka.topology.lldp.walk
+              tags:
+                - tag: component
+                  value: topology
+                - tag: protocol
+                  value: LLDP
+            - uuid: ef5875a55833415d93b49a40e7d2bbc3
+              name: 'Topology LLDP [{#LOCAL.PORTNUM}/{#REMOTE.INDEX}]: Remote system description'
+              type: DEPENDENT
+              key: 'laka.topology.lldp.remote.description[{#TIMEMARK},{#LOCAL.PORTNUM},{#REMOTE.INDEX}]'
+              delay: '0'
+              value_type: TEXT
+              trends: '0'
+              preprocessing:
+                - type: SNMP_WALK_VALUE
+                  parameters:
+                    - '1.0.8802.1.1.2.1.4.1.1.10.{#SNMPINDEX}'
+                    - '0'
+              master_item:
+                key: laka.topology.lldp.walk
+              tags:
+                - tag: component
+                  value: topology
+                - tag: protocol
+                  value: LLDP
+          master_item:
+            key: laka.topology.lldp.walk
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - |
+                  var lines = value.split(/\r?\n/), names = {}, chassis = {};
+                  var nameBase = '1.0.8802.1.1.2.1.4.1.1.9.';
+                  var chassisBase = '1.0.8802.1.1.2.1.4.1.1.5.';
+                  function clean(raw) {
+                    var colon = raw.indexOf(': ');
+                    var result = colon >= 0 ? raw.substring(colon + 2) : raw;
+                    return result.replace(/^"|"$/g, '');
+                  }
+                  for (var i = 0; i < lines.length; i++) {
+                    var p = lines[i].indexOf(' = ');
+                    if (p < 0) continue;
+                    var oid = lines[i].substring(0, p).replace(/^\./, '');
+                    var raw = lines[i].substring(p + 3);
+                    if (oid.indexOf(nameBase) === 0) names[oid.substring(nameBase.length)] = clean(raw);
+                    if (oid.indexOf(chassisBase) === 0) chassis[oid.substring(chassisBase.length)] = clean(raw);
+                  }
+                  var keys = Object.keys(names).concat(Object.keys(chassis));
+                  var seen = {}, result = [];
+                  for (var k = 0; k < keys.length; k++) {
+                    var suffix = keys[k];
+                    if (seen[suffix]) continue;
+                    seen[suffix] = true;
+                    var idx = suffix.split('.');
+                    if (idx.length !== 3) continue;
+                    var remoteName = names[suffix] || chassis[suffix] || 'Unknown';
+                    result.push({
+                      '{#SNMPINDEX}': suffix,
+                      '{#TIMEMARK}': idx[0],
+                      '{#LOCAL.PORTNUM}': idx[1],
+                      '{#REMOTE.INDEX}': idx[2],
+                      '{#REMOTE.NAME}': remoteName
+                    });
+                  }
+                  return JSON.stringify(result);
+      macros:
+        - macro: '{$LAKA.TOPOLOGY.UPDATE}'
+          value: 5m
+          description: 'CDP and LLDP polling interval.'
+        - macro: '{$LAKA.TOPOLOGY.CDP.NAME.MATCHES}'
+          value: '.*'
+          description: 'Regular expression for included CDP neighbor device IDs.'
+        - macro: '{$LAKA.TOPOLOGY.CDP.NAME.NOT_MATCHES}'
+          value: '^$'
+          description: 'Regular expression for excluded CDP neighbor device IDs.'
+        - macro: '{$LAKA.TOPOLOGY.LLDP.NAME.MATCHES}'
+          value: '.*'
+          description: 'Regular expression for included LLDP system names or chassis IDs.'
+        - macro: '{$LAKA.TOPOLOGY.LLDP.NAME.NOT_MATCHES}'
+          value: '^$'
+          description: 'Regular expression for excluded LLDP system names or chassis IDs.'
+      tags:
+        - tag: class
+          value: network
+        - tag: target
+          value: cisco
+        - tag: component
+          value: topology
