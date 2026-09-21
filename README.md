@@ -1,6 +1,6 @@
 # LAKA Network Switch Widget
 
-Widget de panel físico para **Zabbix 7.0 LTS**, orientado inicialmente a switches Cisco Catalyst.
+Widget de panel físico para **Zabbix 7.0 LTS a 7.4**, orientado inicialmente a switches Cisco Catalyst.
 
 Versión actual: **1.0**.
 
