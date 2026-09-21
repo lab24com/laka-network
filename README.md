@@ -89,7 +89,7 @@ El panel acepta entre 1 y 12 interfaces y periodos de 1 hora a 7 días.
 
 3. En Zabbix ir a **Administración > General > Módulos**, ejecutar **Escanear directorio** y habilitar **LAKA Network Switch**.
 4. Agregar el widget al dashboard, seleccionar el host y guardar.
-
+5. Importa la plantilla **template_laka_cisco_topology_snmp** para el descubrimiento de vecinos mediante cpd y lldp.
 ## Patrones de ítems
 
 Cada patrón debe contener exactamente un `*`, que representa `{#SNMPINDEX}`. Los valores predeterminados siguen un esquema frecuente de plantillas SNMP:
