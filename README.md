@@ -116,7 +116,3 @@ Si la plantilla usa claves como `ifOperStatus[10101]`, configure `ifOperStatus[*
 | Rojo con borde | Problema/trigger activo relacionado con el puerto |
 
 La barra inferior indica utilización: azul normal, ámbar desde 60% y rojo desde 80%.
-
-## Alcance y siguiente versión
-
-Esta primera versión usa el último valor almacenado. La próxima etapa puede incorporar gráficas históricas, VLAN, PoE, CPU, memoria, temperatura, PSU y ventiladores.
