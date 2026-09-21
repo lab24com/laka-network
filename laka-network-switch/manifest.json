@@ -1,0 +1,31 @@
+{
+  "manifest_version": 2.0,
+  "id": "laka_network_switch",
+  "type": "widget",
+  "name": "Network",
+  "namespace": "LakaNetworkSwitch",
+  "version": "0.19.6",
+  "author": "LAKA Soluciones Tecnologicas",
+  "description": "Automatic physical interface panel for Zabbix 7.0 dashboards.",
+  "url": "",
+  "widget": {
+    "template_support": true,
+    "js_class": "CWidgetLakaNetworkSwitch"
+  },
+  "actions": {
+    "widget.laka_network_switch.view": {
+      "class": "WidgetView"
+    },
+    "widget.laka_network_switch.history": {
+      "class": "WidgetHistory",
+      "layout": "layout.json"
+    },
+    "widget.laka_network_switch.topology": {
+      "class": "WidgetTopology",
+      "layout": "layout.json"
+    }
+  },
+  "assets": {
+    "js": ["class.widget.js"]
+  }
+}
